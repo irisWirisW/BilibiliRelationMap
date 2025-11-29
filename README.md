@@ -412,7 +412,7 @@ A:
 
 ## 🙏 致谢
 
-- [Bilibili-Evolved](https://github.com/the1112/Bilibili-Evolved) - 构建方案参考
+- [Bilibili-Evolved](https://github.com/the1812/Bilibili-Evolved) - 构建方案参考
 - [Cosmograph](https://cosmograph.app/) - 图形可视化库
 - [Ant Design](https://ant.design/) - UI 组件库
 - [React](https://react.dev/) - UI 框架
