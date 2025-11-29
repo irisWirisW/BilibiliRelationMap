@@ -102,9 +102,7 @@
    - Firefox: [Greasemonkey](https://addons.mozilla.org/firefox/addon/greasemonkey/)
 
 2. **安装脚本**
-   - 下载 `dist/script.user.js` 文件
-   - 在浏览器中打开该文件
-   - 油猴会自动识别并提示安装
+   - [安装](https://raw.githubusercontent.com/irisWirisW/BilibiliRelationMap/master/script.user.js)
 
 3. **使用脚本**
    - 访问任意哔哩哔哩用户空间页面（`space.bilibili.com/:uid`）
