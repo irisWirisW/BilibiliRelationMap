@@ -11,7 +11,7 @@ import {
 } from "@ant-design/icons";
 import FansList from "./FansList";
 import FollowingsList from "./FollowingsList";
-import FollowingsGraph from "./FollowingsGraph";
+import FollowingsGraph from "./FollowingsGraph/index";
 import metadata from "../metadata.json";
 
 const { Title, Paragraph } = Typography;
@@ -29,7 +29,7 @@ const InfoModal: React.FC<InfoModalProps> = ({ visible, onClose }) => {
           <CodeOutlined /> Bilibili React Helper
         </Title>
         <Paragraph>
-          这是一个基于 <Tag color="blue">React</Tag> + 
+          这是一个基于 <Tag color="blue">React</Tag> +
           <Tag color="green">TypeScript</Tag> +
           <Tag color="cyan">Ant Design</Tag> 构建的油猴脚本示例。
         </Paragraph>
