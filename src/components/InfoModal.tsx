@@ -11,7 +11,7 @@ import {
 } from "@ant-design/icons";
 import FansList from "./FansList";
 import FollowingsList from "./FollowingsList";
-import FollowingsGraph from "./FollowingsGraph";
+import DynamicFollowingsGraph from "./DynamicFollowingsGraph/index";
 import metadata from "../metadata.json";
 
 const { Title, Paragraph } = Typography;
@@ -29,7 +29,7 @@ const InfoModal: React.FC<InfoModalProps> = ({ visible, onClose }) => {
           <CodeOutlined /> Bilibili React Helper
         </Title>
         <Paragraph>
-          这是一个基于 <Tag color="blue">React</Tag> + 
+          这是一个基于 <Tag color="blue">React</Tag> +
           <Tag color="green">TypeScript</Tag> +
           <Tag color="cyan">Ant Design</Tag> 构建的油猴脚本示例。
         </Paragraph>
@@ -94,14 +94,14 @@ const InfoModal: React.FC<InfoModalProps> = ({ visible, onClose }) => {
       children: <FollowingsList />,
     },
     {
-      key: "graph",
+      key: "dynamicgraph",
       label: (
         <span>
           <ApartmentOutlined />
-          关注网络图
+          动态关注网络图
         </span>
       ),
-      children: <FollowingsGraph />,
+      children: <DynamicFollowingsGraph />,
     },
   ];
 
@@ -116,11 +116,12 @@ const InfoModal: React.FC<InfoModalProps> = ({ visible, onClose }) => {
       zIndex={100000}
       destroyOnClose
     >
-      <div style={{ height: "80vh" }}>
+      <div style={{ height: "80vh", display: "flex", flexDirection: "column" }}>
         <Tabs
           items={items}
           defaultActiveKey="info"
-          style={{ height: "100%" }}
+          style={{ height: "100%", display: "flex", flexDirection: "column" }}
+          tabBarStyle={{ flexShrink: 0 }}
         />
       </div>
     </Modal>

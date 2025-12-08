@@ -14,3 +14,18 @@
   box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
   transform: translateY(-2px);
 }
+
+/* Tabs 高度填充修复 */
+.ant-tabs-content-holder {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ant-tabs-content {
+  height: 100%;
+}
+
+.ant-tabs-tabpane {
+  height: 100%;
+}

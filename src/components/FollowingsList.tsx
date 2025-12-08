@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Table, Avatar, Tag, Space, Spin, List, Typography } from "antd";
-import { UserOutlined, CrownOutlined } from "@ant-design/icons";
+import { UserOutlined } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import { FansItem } from "../types/bilibili";
 import {
@@ -9,6 +9,8 @@ import {
   getCommonFollowings,
 } from "../services/biliApi";
 import { useAppContext } from "../contexts/AppContext";
+import { getBaseUserColumns } from "./shared/UserTableColumns";
+import logger from "../utils/logger";
 
 const { Text } = Typography;
 
@@ -91,20 +93,20 @@ const FollowingsList: React.FC = () => {
     );
 
     try {
-      const response = await getCommonFollowings(mid);
-      const users = response.data.list;
+      const result = await getCommonFollowings(mid);
+      const users = result.response.data.list;
       const mids = users.map((u) => u.mid);
 
       setCommonFollowingsMap((prev) =>
         new Map(prev).set(mid, {
-          count: response.data.total,
+          count: result.response.data.total,
           mids: mids,
           users: users,
           loading: false,
         }),
       );
     } catch (error) {
-      console.error(`加载共同关注失败 (mid: ${mid})`, error);
+      logger.error(`加载共同关注失败 (mid: ${mid})`, error);
       setCommonFollowingsMap((prev) =>
         new Map(prev).set(mid, {
           count: 0,
@@ -119,32 +121,6 @@ const FollowingsList: React.FC = () => {
   useEffect(() => {
     loadFollowings(1);
   }, []);
-
-  // 获取认证标签
-  const getVerifyTag = (verify: FansItem["official_verify"]) => {
-    if (verify.type === -1) return null;
-    return (
-      <Tag color={verify.type === 0 ? "blue" : "gold"} icon={<CrownOutlined />}>
-        {verify.type === 0 ? "UP主认证" : "机构认证"}
-      </Tag>
-    );
-  };
-
-  // 获取会员标签
-  const getVipTag = (vip: FansItem["vip"]) => {
-    if (vip.vipStatus === 0) return null;
-    return (
-      <Tag color="magenta">
-        {vip.vipType === 1 ? "月度大会员" : "年度大会员"}
-      </Tag>
-    );
-  };
-
-  // 格式化时间
-  const formatTime = (timestamp: number) => {
-    if (!timestamp) return "-";
-    return new Date(timestamp * 1000).toLocaleDateString("zh-CN");
-  };
 
   // 展开行渲染
   const expandedRowRender = (record: FansItem) => {
@@ -194,75 +170,30 @@ const FollowingsList: React.FC = () => {
     );
   };
 
+  // 共同关注列（FollowingsList 特有）
+  const commonFollowingsColumn: ColumnsType<FansItem>[number] = {
+    title: "共同关注",
+    key: "common",
+    width: 100,
+    render: (_, record) => {
+      const common = commonFollowingsMap.get(record.mid);
+      if (!common) {
+        return <Tag color="default">加载中...</Tag>;
+      }
+      if (common.loading) {
+        return <Spin size="small" />;
+      }
+      if (common.count === 0) {
+        return <Tag color="default">无</Tag>;
+      }
+      return <Tag color="blue">{common.count} 个</Tag>;
+    },
+  };
+
+  // 使用共享基础列 + 共同关注列
   const columns: ColumnsType<FansItem> = [
-    {
-      title: "头像",
-      dataIndex: "face",
-      key: "face",
-      width: 80,
-      render: (face: string) => (
-        <Avatar src={face} size={48} icon={<UserOutlined />} />
-      ),
-    },
-    {
-      title: "昵称",
-      dataIndex: "uname",
-      key: "uname",
-      width: 150,
-      render: (uname: string, record) => (
-        <a
-          href={`https://space.bilibili.com/${record.mid}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ color: record.vip.nickname_color || "inherit" }}
-        >
-          {uname}
-        </a>
-      ),
-    },
-    {
-      title: "签名",
-      dataIndex: "sign",
-      key: "sign",
-      ellipsis: true,
-      render: (sign: string) => sign || "-",
-    },
-    {
-      title: "认证/会员",
-      key: "tags",
-      width: 180,
-      render: (_, record) => (
-        <Space>
-          {getVerifyTag(record.official_verify)}
-          {getVipTag(record.vip)}
-        </Space>
-      ),
-    },
-    {
-      title: "关注时间",
-      dataIndex: "mtime",
-      key: "mtime",
-      width: 120,
-      render: (mtime: number) => formatTime(mtime),
-    },
-    {
-      title: "共同关注",
-      key: "common",
-      width: 100,
-      render: (_, record) => {
-        const common = commonFollowingsMap.get(record.mid);
-        if (!common) {
-          return <Tag color="default">加载中...</Tag>;
-        }
-        if (common.loading) {
-          return <Spin size="small" />;
-        }
-        if (common.count === 0) {
-          return <Tag color="default">无</Tag>;
-        }
-        return <Tag color="blue">{common.count} 个</Tag>;
-      },
-    },
+    ...getBaseUserColumns(),
+    commonFollowingsColumn,
   ];
 
   return (

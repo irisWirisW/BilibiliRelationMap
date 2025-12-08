@@ -1,153 +1,182 @@
-import { FansResponse, CommonFollowingsResponse } from '../types/bilibili'
-import { cacheManager } from '../utils/cacheManager'
+import { FansResponse, CommonFollowingsResponse } from "../types/bilibili";
+import { cacheManager } from "../utils/cacheManager";
+import logger from "../utils/logger";
 
-/**
- * 获取当前用户的 mid
- * 从页面中提取或使用默认值
- */
-export const getCurrentUserMid = (): number => {
-  // 尝试从页面 URL 获取
-  const match = window.location.href.match(/space\.bilibili\.com\/(\d+)/)
-  if (match) {
-    return parseInt(match[1], 10)
-  }
+// ================== 通用 HTTP 请求层 ==================
 
-  // 尝试从页面元素获取
-  const midElement = document.querySelector('[data-usercard-mid]')
-  if (midElement) {
-    const mid = midElement.getAttribute('data-usercard-mid')
-    if (mid) return parseInt(mid, 10)
-  }
-
-  // 返回 0 表示需要用户提供
-  return 0
-}
-
-interface GetFansListParams {
-  vmid: number
-  ps?: number // 每页项数，默认 50
-  pn?: number // 页码，默认 1
-  offset?: string // 偏移量
+interface BiliApiResponse {
+  code: number;
+  message: string;
+  ttl?: number;
+  data?: unknown;
 }
 
 /**
- * 获取粉丝列表
- * 使用 GM_xmlhttpRequest 发起跨域请求
+ * 通用 API 请求函数
+ * 封装 GM_xmlhttpRequest，统一处理请求和响应
  */
-export const getFansList = (params: GetFansListParams): Promise<FansResponse> => {
+const request = <T extends BiliApiResponse>(
+  url: string,
+  params?: Record<string, string | number>,
+): Promise<T> => {
   return new Promise((resolve, reject) => {
-    const { vmid, ps = 20, pn = 1, offset } = params
-
-    const url = new URL('https://api.bilibili.com/x/relation/fans')
-    url.searchParams.append('vmid', vmid.toString())
-    url.searchParams.append('ps', ps.toString())
-    url.searchParams.append('pn', pn.toString())
-    if (offset) {
-      url.searchParams.append('offset', offset)
+    const fullUrl = new URL(url);
+    if (params) {
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          fullUrl.searchParams.append(key, String(value));
+        }
+      });
     }
 
     GM_xmlhttpRequest({
-      method: 'GET',
-      url: url.toString(),
+      method: "GET",
+      url: fullUrl.toString(),
+      timeout: 30000,
       onload: (response) => {
         try {
-          const data: FansResponse = JSON.parse(response.responseText)
+          const data: T = JSON.parse(response.responseText);
           if (data.code === 0) {
-            resolve(data)
+            resolve(data);
           } else {
-            reject(new Error(data.message || '请求失败'))
+            reject(new Error(data.message || "请求失败"));
           }
-        } catch (error) {
-          reject(new Error('解析响应失败'))
+        } catch {
+          reject(new Error("解析响应失败"));
         }
       },
-      onerror: (error) => {
-        reject(new Error('网络请求失败'))
-      }
-    })
-  })
+      onerror: () => {
+        reject(new Error("网络请求失败"));
+      },
+      ontimeout: () => {
+        reject(new Error("请求超时"));
+      },
+    });
+  });
+};
+
+// ================== 类型定义 ==================
+
+interface NavResponse {
+  code: number;
+  message: string;
+  ttl: number;
+  data: {
+    isLogin: boolean;
+    mid: number;
+    uname: string;
+  };
 }
+
+interface GetFansListParams {
+  vmid: number;
+  ps?: number;
+  pn?: number;
+  offset?: string;
+}
+
+export interface CommonFollowingsResult {
+  response: CommonFollowingsResponse;
+  fromCache: boolean;
+}
+
+// ================== API 函数 ==================
+
+/**
+ * 通过 API 获取当前登录用户的 mid
+ */
+export const getCurrentUserMidFromAPI = async (): Promise<number> => {
+  const data = await request<NavResponse>(
+    "https://api.bilibili.com/x/web-interface/nav",
+  );
+
+  if (!data.data.isLogin) {
+    throw new Error("用户未登录");
+  }
+
+  return data.data.mid;
+};
+
+/**
+ * 获取当前用户的 mid (同步方法)
+ * 从页面中提取，适合在 B站页面内使用
+ */
+export const getCurrentUserMid = (): number => {
+  // 尝试从页面 URL 获取
+  const match = window.location.href.match(/space\.bilibili\.com\/(\d+)/);
+  if (match) {
+    return parseInt(match[1], 10);
+  }
+
+  // 尝试从页面元素获取
+  const midElement = document.querySelector("[data-usercard-mid]");
+  if (midElement) {
+    const mid = midElement.getAttribute("data-usercard-mid");
+    if (mid) return parseInt(mid, 10);
+  }
+
+  return 0;
+};
+
+/**
+ * 获取粉丝列表
+ */
+export const getFansList = (
+  params: GetFansListParams,
+): Promise<FansResponse> => {
+  const { vmid, ps = 20, pn = 1, offset } = params;
+  return request<FansResponse>("https://api.bilibili.com/x/relation/fans", {
+    vmid,
+    ps,
+    pn,
+    ...(offset && { offset }),
+  });
+};
 
 /**
  * 获取关注列表
- * 使用 GM_xmlhttpRequest 发起跨域请求
  */
-export const getFollowingsList = (params: GetFansListParams): Promise<FansResponse> => {
-  return new Promise((resolve, reject) => {
-    const { vmid, ps = 20, pn = 1 } = params
-
-    const url = new URL('https://api.bilibili.com/x/relation/followings')
-    url.searchParams.append('vmid', vmid.toString())
-    url.searchParams.append('ps', ps.toString())
-    url.searchParams.append('pn', pn.toString())
-
-    GM_xmlhttpRequest({
-      method: 'GET',
-      url: url.toString(),
-      onload: (response) => {
-        try {
-          const data: FansResponse = JSON.parse(response.responseText)
-          if (data.code === 0) {
-            resolve(data)
-          } else {
-            reject(new Error(data.message || '请求失败'))
-          }
-        } catch (error) {
-          reject(new Error('解析响应失败'))
-        }
-      },
-      onerror: (error) => {
-        reject(new Error('网络请求失败'))
-      }
-    })
-  })
-}
+export const getFollowingsList = (
+  params: GetFansListParams,
+): Promise<FansResponse> => {
+  const { vmid, ps = 20, pn = 1 } = params;
+  return request<FansResponse>(
+    "https://api.bilibili.com/x/relation/followings",
+    {
+      vmid,
+      ps,
+      pn,
+    },
+  );
+};
 
 /**
- * 获取共同关注列表
- * 使用缓存机制，避免重复请求
+ * 获取共同关注列表（带缓存）
  */
 export const getCommonFollowings = async (
   vmid: number,
-  useCache: boolean = true
-): Promise<CommonFollowingsResponse> => {
-  const cacheKey = `common_followings_${vmid}`
+  useCache: boolean = true,
+): Promise<CommonFollowingsResult> => {
+  const cacheKey = `common_followings_${vmid}`;
 
   // 先查询缓存
   if (useCache) {
-    const cached = cacheManager.get<CommonFollowingsResponse>(cacheKey)
+    const cached = cacheManager.get<CommonFollowingsResponse>(cacheKey);
     if (cached) {
-      console.log(`从缓存加载共同关注 (mid: ${vmid})`)
-      return cached
+      logger.log(`从缓存加载共同关注 (mid: ${vmid})`);
+      return { response: cached, fromCache: true };
     }
   }
 
   // 缓存未命中，发起请求
-  return new Promise((resolve, reject) => {
-    const url = new URL('https://api.bilibili.com/x/relation/followings/followed_upper')
-    url.searchParams.append('vmid', vmid.toString())
+  const response = await request<CommonFollowingsResponse>(
+    "https://api.bilibili.com/x/relation/followings/followed_upper",
+    { vmid },
+  );
 
-    GM_xmlhttpRequest({
-      method: 'GET',
-      url: url.toString(),
-      onload: (response) => {
-        try {
-          const data: CommonFollowingsResponse = JSON.parse(response.responseText)
-          if (data.code === 0) {
-            // 存入缓存
-            cacheManager.set(cacheKey, data)
-            console.log(`API 请求共同关注 (mid: ${vmid}), 已缓存`)
-            resolve(data)
-          } else {
-            reject(new Error(data.message || '请求失败'))
-          }
-        } catch (error) {
-          reject(new Error('解析响应失败'))
-        }
-      },
-      onerror: (error) => {
-        reject(new Error('网络请求失败'))
-      }
-    })
-  })
-}
+  // 存入缓存
+  cacheManager.set(cacheKey, response);
+  logger.log(`API 请求共同关注 (mid: ${vmid}), 已缓存`);
+
+  return { response, fromCache: false };
+};
