@@ -17,7 +17,7 @@ const FloatingButton: React.FC<FloatingButtonProps> = ({ onClick }) => {
         onClick={onClick}
       />
     </div>
-  )
-}
+  );
+};
 
-export default FloatingButton
+export default FloatingButton;

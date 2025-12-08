@@ -6,6 +6,7 @@ import {
   getCommonFollowings,
 } from "../../services/biliApi";
 import { MessageInstance } from "antd/es/message/interface";
+import { useGraphDataContext } from "../../contexts/GraphDataContext";
 
 /**
  * 数据加载 Hook
@@ -13,11 +14,16 @@ import { MessageInstance } from "antd/es/message/interface";
  */
 export const useGraphData = (message: MessageInstance) => {
   const [loading, setLoading] = useState(false);
-  const [followingsList, setFollowingsList] = useState<FansItem[]>([]);
-  const [commonFollowingsMap, setCommonFollowingsMap] = useState<
-    Map<number, number[]>
-  >(new Map());
-  const [dataLoaded, setDataLoaded] = useState(false);
+
+  // 使用 Context 中的全局状态
+  const {
+    followingsList,
+    setFollowingsList,
+    commonFollowingsMap,
+    setCommonFollowingsMap,
+    dataLoaded,
+    setDataLoaded,
+  } = useGraphDataContext();
 
   // 批量加载共同关注
   const loadCommonFollowingsBatch = async (mids: number[]) => {
@@ -31,8 +37,8 @@ export const useGraphData = (message: MessageInstance) => {
       await Promise.all(
         batch.map(async (mid) => {
           try {
-            const response = await getCommonFollowings(mid);
-            const commonMids = response.data.list.map((u) => u.mid);
+            const result = await getCommonFollowings(mid);
+            const commonMids = result.response.data.list.map((u) => u.mid);
             map.set(mid, commonMids);
           } catch (error) {
             console.error(`加载共同关注失败 (mid: ${mid})`, error);

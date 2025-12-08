@@ -1,6 +1,6 @@
 {
   "name": "react-userscript",
-  "version": "0.2.4",
+  "version": "0.3.0",
   "description": "React + TypeScript + Ant Design 油猴脚本",
   "type": "module",
   "main": "dist/script.user.js",
@@ -20,6 +20,8 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
+    "@types/d3-force": "^3.0.10",
+    "@types/dat.gui": "^0.7.13",
     "@types/node": "^24.10.1",
     "@types/react": "^18.2.45",
     "@types/react-dom": "^18.2.18",
@@ -38,7 +40,13 @@
   "dependencies": {
     "@ant-design/icons": "^6.1.0",
     "@cosmograph/cosmograph": "^1.4.2",
+    "@types/d3-dsv": "^3.0.7",
     "antd": "^5.12.5",
+    "d3-dsv": "^3.0.1",
+    "d3-force": "^3.0.0",
+    "dat.gui": "^0.7.9",
+    "force-graph": "^1.43.5",
+    "idb": "^8.0.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   }

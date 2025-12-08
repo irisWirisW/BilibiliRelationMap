@@ -1,29 +1,35 @@
 import React, { useState, useRef } from "react";
 import { Spin } from "antd";
-import { Cosmograph } from "@cosmograph/cosmograph";
+import ForceGraph from "force-graph";
 import { useAppContext } from "../../contexts/AppContext";
-import { GraphNode, GraphLink, DebugParams } from "./types";
-import { DEFAULT_DEBUG_PARAMS } from "./graphConfig";
-import { useGraphData } from "./useGraphData";
-import { useGraphTransform } from "./useGraphTransform";
-import GraphControls from "./GraphControls";
-import GraphCanvas from "./GraphCanvas";
-import DebugPanel from "./DebugPanel";
+import { GraphNode, GraphLink, DebugParams } from "../FollowingsGraph/types";
+import { DEFAULT_DEBUG_PARAMS } from "../FollowingsGraph/graphConfig";
+import { useGraphData } from "../FollowingsGraph/useGraphData";
+import { useGraphTransform } from "../FollowingsGraph/useGraphTransform";
+import GraphControls from "../FollowingsGraph/GraphControls";
+import ForceGraphCanvas from "../FollowingsGraph/ForceGraphCanvas";
+import DebugPanel from "../FollowingsGraph/DebugPanel";
+import { csvParse } from 'd3-dsv';
+import { GUI } from "dat.gui";
 
 /**
- * FollowingsGraph 主组件
- * 整合所有子组件和逻辑
+ * ForceGraphView 主组件
+ * 使用 force-graph 引擎的关注网络图
  */
-const FollowingsGraph: React.FC = () => {
+const ForceGraphView: React.FC = () => {
   const { message } = useAppContext();
-  const graphRef = useRef<Cosmograph<GraphNode, GraphLink> | null>(null);
+  const graphRef = useRef<ForceGraph | null>(null);
   const [debugMode, setDebugMode] = useState(false);
-  const [debugParams, setDebugParams] =
-    useState<DebugParams>(DEFAULT_DEBUG_PARAMS);
+  const [debugParams, setDebugParams] = useState<DebugParams>(DEFAULT_DEBUG_PARAMS);
 
   // 使用数据加载 hook
-  const { loading, followingsList, commonFollowingsMap, dataLoaded, loadAllData } =
-    useGraphData(message);
+  const {
+    loading,
+    followingsList,
+    commonFollowingsMap,
+    dataLoaded,
+    loadAllData,
+  } = useGraphData(message);
 
   // 使用数据转换 hook
   const { graphData, stats } = useGraphTransform(
@@ -36,7 +42,7 @@ const FollowingsGraph: React.FC = () => {
   // 重置视图
   const handleReset = () => {
     if (graphRef.current) {
-      graphRef.current.fitView();
+      graphRef.current.zoomToFit(400);
     }
   };
 
@@ -55,9 +61,14 @@ const FollowingsGraph: React.FC = () => {
       return;
     }
 
-    // 重启模拟以应用新的物理参数
-    // 注意：渲染参数（颜色、大小等）通过 useEffect 已实时应用
-    graphRef.current.restart();
+    // Force-graph 的模拟通过 d3-force 运行
+    // 调用 d3-force 的 alpha 来重启模拟
+    const d3Force = (graphRef.current as any).d3Force;
+    if (d3Force) {
+      // 重新加热模拟（设置 alpha 为较高值）
+      d3Force('alpha', 0.3).restart();
+    }
+
     message.success("模拟已重启，物理参数生效中...");
   };
 
@@ -81,7 +92,7 @@ const FollowingsGraph: React.FC = () => {
       const url = URL.createObjectURL(dataBlob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `bilibili-graph-config-${Date.now()}.json`;
+      link.download = `bilibili-forcegraph-config-${Date.now()}.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -206,7 +217,7 @@ const FollowingsGraph: React.FC = () => {
   };
 
   // 图形就绪回调
-  const handleGraphReady = (graph: Cosmograph<GraphNode, GraphLink>) => {
+  const handleGraphReady = (graph: ForceGraph) => {
     graphRef.current = graph;
   };
 
@@ -265,7 +276,7 @@ const FollowingsGraph: React.FC = () => {
         />
 
         {/* 图形画布 */}
-        <GraphCanvas
+        <ForceGraphCanvas
           graphData={graphData}
           debugParams={debugParams}
           onGraphReady={handleGraphReady}
@@ -275,4 +286,4 @@ const FollowingsGraph: React.FC = () => {
   );
 };
 
-export default FollowingsGraph;
+export default ForceGraphView;

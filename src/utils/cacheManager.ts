@@ -1,94 +1,184 @@
 /**
  * 缓存管理工具
- * 使用 localStorage 存储数据，支持过期时间
+ * 支持 IndexedDB（优先）和 localStorage（降级）双存储
  */
 
+import { indexedDBManager } from './indexedDBManager';
+
 interface CacheItem<T> {
-  data: T
-  expiry: number // 过期时间戳
+  data: T;
+  expiry: number; // 过期时间戳
 }
 
+type StorageType = 'localStorage' | 'indexedDB' | 'auto';
+
 interface CacheConfig {
-  expiryDays: number // 过期天数，默认 1 天
+  expiryDays: number; // 过期天数，默认 30 天
+  storage: StorageType; // 存储类型
 }
 
 const DEFAULT_CONFIG: CacheConfig = {
-  expiryDays: 1
-}
+  expiryDays: 30, // 30天（1个月）
+  storage: 'auto', // 自动选择：优先 IndexedDB，降级到 localStorage
+};
 
 class CacheManager {
-  private prefix = 'bilibili_helper_'
-  private config: CacheConfig
+  private prefix = 'bilibili_helper_';
+  private config: CacheConfig;
 
   constructor(config: Partial<CacheConfig> = {}) {
-    this.config = { ...DEFAULT_CONFIG, ...config }
+    this.config = { ...DEFAULT_CONFIG, ...config };
   }
 
   /**
-   * 设置缓存
+   * 设置缓存（异步版本，支持 IndexedDB）
+   */
+  async setAsync<T>(key: string, data: T): Promise<void> {
+    const storage = this.config.storage;
+
+    // IndexedDB 优先
+    if (storage === 'indexedDB' || storage === 'auto') {
+      try {
+        await indexedDBManager.set(key, data);
+        return;
+      } catch (error) {
+        console.warn('IndexedDB 写入失败，降级到 localStorage:', error);
+        if (storage === 'indexedDB') {
+          throw error; // 如果明确指定只用 IndexedDB，则抛出错误
+        }
+      }
+    }
+
+    // localStorage 降级
+    this.setSync(key, data);
+  }
+
+  /**
+   * 设置缓存（同步版本，仅 localStorage）
    */
   set<T>(key: string, data: T): void {
-    const expiry = Date.now() + this.config.expiryDays * 24 * 60 * 60 * 1000
-    const cacheItem: CacheItem<T> = { data, expiry }
+    this.setSync(key, data);
+  }
+
+  /**
+   * 内部同步设置方法
+   */
+  private setSync<T>(key: string, data: T): void {
+    const expiry = Date.now() + this.config.expiryDays * 24 * 60 * 60 * 1000;
+    const cacheItem: CacheItem<T> = { data, expiry };
 
     try {
-      localStorage.setItem(
-        this.prefix + key,
-        JSON.stringify(cacheItem)
-      )
+      localStorage.setItem(this.prefix + key, JSON.stringify(cacheItem));
     } catch (error) {
-      console.error('缓存写入失败:', error)
+      console.error('localStorage 写入失败:', error);
     }
   }
 
   /**
-   * 获取缓存
-   * 如果缓存不存在或已过期，返回 null
+   * 获取缓存（异步版本，支持 IndexedDB）
+   */
+  async getAsync<T>(key: string): Promise<T | null> {
+    const storage = this.config.storage;
+
+    // IndexedDB 优先
+    if (storage === 'indexedDB' || storage === 'auto') {
+      try {
+        const data = await indexedDBManager.get<T>(key);
+        if (data !== null) {
+          return data;
+        }
+        // IndexedDB 中没有，继续尝试 localStorage（可能是旧数据）
+      } catch (error) {
+        console.warn('IndexedDB 读取失败，降级到 localStorage:', error);
+      }
+    }
+
+    // localStorage 降级或备份读取
+    if (storage === 'localStorage' || storage === 'auto') {
+      return this.getSync<T>(key);
+    }
+
+    return null;
+  }
+
+  /**
+   * 获取缓存（同步版本，仅 localStorage）
    */
   get<T>(key: string): T | null {
-    try {
-      const item = localStorage.getItem(this.prefix + key)
-      if (!item) return null
+    return this.getSync<T>(key);
+  }
 
-      const cacheItem: CacheItem<T> = JSON.parse(item)
+  /**
+   * 内部同步获取方法
+   */
+  private getSync<T>(key: string): T | null {
+    try {
+      const item = localStorage.getItem(this.prefix + key);
+      if (!item) return null;
+
+      const cacheItem: CacheItem<T> = JSON.parse(item);
 
       // 检查是否过期
       if (Date.now() > cacheItem.expiry) {
-        this.remove(key)
-        return null
+        this.remove(key);
+        return null;
       }
 
-      return cacheItem.data
+      return cacheItem.data;
     } catch (error) {
-      console.error('缓存读取失败:', error)
-      return null
+      console.error('localStorage 读取失败:', error);
+      return null;
     }
   }
 
   /**
-   * 删除缓存
+   * 删除缓存（同时删除两个存储）
+   */
+  async removeAsync(key: string): Promise<void> {
+    try {
+      await indexedDBManager.remove(key);
+    } catch (error) {
+      console.warn('IndexedDB 删除失败:', error);
+    }
+    this.remove(key);
+  }
+
+  /**
+   * 删除缓存（同步版本，仅 localStorage）
    */
   remove(key: string): void {
     try {
-      localStorage.removeItem(this.prefix + key)
+      localStorage.removeItem(this.prefix + key);
     } catch (error) {
-      console.error('缓存删除失败:', error)
+      console.error('localStorage 删除失败:', error);
     }
   }
 
   /**
-   * 清除所有缓存
+   * 清除所有缓存（同时清除两个存储）
+   */
+  async clearAsync(): Promise<void> {
+    try {
+      await indexedDBManager.clear();
+    } catch (error) {
+      console.warn('IndexedDB 清除失败:', error);
+    }
+    this.clear();
+  }
+
+  /**
+   * 清除所有缓存（同步版本，仅 localStorage）
    */
   clear(): void {
     try {
-      const keys = Object.keys(localStorage)
-      keys.forEach(key => {
+      const keys = Object.keys(localStorage);
+      keys.forEach((key) => {
         if (key.startsWith(this.prefix)) {
-          localStorage.removeItem(key)
+          localStorage.removeItem(key);
         }
-      })
+      });
     } catch (error) {
-      console.error('清除缓存失败:', error)
+      console.error('localStorage 清除失败:', error);
     }
   }
 
@@ -96,9 +186,10 @@ class CacheManager {
    * 更新配置
    */
   updateConfig(config: Partial<CacheConfig>): void {
-    this.config = { ...this.config, ...config }
+    this.config = { ...this.config, ...config };
   }
 }
 
 // 导出单例
-export const cacheManager = new CacheManager()
+export const cacheManager = new CacheManager();
+

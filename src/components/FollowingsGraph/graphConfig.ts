@@ -29,6 +29,9 @@ export const DEFAULT_DEBUG_PARAMS: DebugParams = {
   showDynamicLabels: true,
   curvedLinks: false,
   swapLinkDirection: true,
+  // 新增：官方示例特性
+  showParticles: false, // 默认关闭粒子动画（性能考虑）
+  enableCollision: true, // 默认启用碰撞检测
 };
 
 // Cosmograph 基础配置

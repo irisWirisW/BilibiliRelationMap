@@ -4,6 +4,8 @@ import zhCN from "antd/locale/zh_CN";
 import FloatingButton from "./components/FloatingButton";
 import InfoModal from "./components/InfoModal";
 import { AppProvider } from "./contexts/AppContext";
+import { GraphDataProvider } from "./contexts/GraphDataContext";
+import StorageMigrator from "./components/StorageMigrator";
 
 const App: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
@@ -28,8 +30,11 @@ const App: React.FC = () => {
     >
       <AntApp>
         <AppProvider>
-          <FloatingButton onClick={handleOpenModal} />
-          <InfoModal visible={modalVisible} onClose={handleCloseModal} />
+          <GraphDataProvider>
+            <StorageMigrator />
+            <FloatingButton onClick={handleOpenModal} />
+            <InfoModal visible={modalVisible} onClose={handleCloseModal} />
+          </GraphDataProvider>
         </AppProvider>
       </AntApp>
     </ConfigProvider>

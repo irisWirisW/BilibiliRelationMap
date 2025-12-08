@@ -31,6 +31,9 @@ export interface DebugParams {
   showDynamicLabels: boolean;
   curvedLinks: boolean;
   swapLinkDirection: boolean;
+  // 新增：官方示例特性
+  showParticles: boolean; // 粒子动画 - 显示关注流向
+  enableCollision: boolean; // 碰撞检测 - 防止节点重叠
 }
 
 export interface GraphStats {

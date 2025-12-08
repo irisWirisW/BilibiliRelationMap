@@ -91,13 +91,13 @@ const FollowingsList: React.FC = () => {
     );
 
     try {
-      const response = await getCommonFollowings(mid);
-      const users = response.data.list;
+      const result = await getCommonFollowings(mid);
+      const users = result.response.data.list;
       const mids = users.map((u) => u.mid);
 
       setCommonFollowingsMap((prev) =>
         new Map(prev).set(mid, {
-          count: response.data.total,
+          count: result.response.data.total,
           mids: mids,
           users: users,
           loading: false,
