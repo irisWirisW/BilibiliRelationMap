@@ -1,13 +1,12 @@
 {
   "name": "react-userscript",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "React + TypeScript + Ant Design 油猴脚本",
   "type": "module",
   "main": "dist/script.user.js",
   "scripts": {
-    "build": "webpack --config webpack.config.cjs",
-    "build:patch": "node scripts/bump-version.cjs patch && webpack --config webpack.config.cjs",
-    "build:minor": "node scripts/bump-version.cjs minor && webpack --config webpack.config.cjs",
+    "build": "node scripts/bump-version.cjs patch && webpack --config webpack.config.cjs",
+    "build:release": "node scripts/bump-version.cjs minor && webpack --config webpack.config.cjs",
     "dev": "webpack --watch --config webpack.config.cjs",
     "type-check": "tsc --noEmit"
   },
