@@ -8,6 +8,7 @@ import {
   Col,
   Progress,
   Select,
+  Slider,
 } from "antd";
 import {
   PlayCircleOutlined,
@@ -120,6 +121,11 @@ const DynamicFollowingsGraph: React.FC = () => {
   const isPausedRef = useRef(false);
   const [dagOrientation, setDagOrientation] = useState<DagOrientation>(null);
 
+  // 力引擎参数
+  const [alphaDecay, setAlphaDecay] = useState(0.05);
+  const [velocityDecay, setVelocityDecay] = useState(0.6);
+  const [particleSpeed, setParticleSpeed] = useState(0.01);
+
   // 统计信息
   const [stats, setStats] = useState({ nodeCount: 0, linkCount: 0 });
 
@@ -142,6 +148,8 @@ const DynamicFollowingsGraph: React.FC = () => {
     const graph = new ForceGraph(containerRef.current)
       .nodeId("id")
       .nodeLabel("name")
+      .d3AlphaDecay(0.05)
+      .d3VelocityDecay(0.6)
       .width(containerRef.current.clientWidth)
       .height(containerRef.current.clientHeight)
       .graphData({ nodes: [], links: [] }) // 初始化空数据
@@ -180,6 +188,7 @@ const DynamicFollowingsGraph: React.FC = () => {
       .autoPauseRedraw(false)
       .linkWidth((link: any) => (highlightLinksRef.current.has(link) ? 3 : 1))
       .linkDirectionalParticles(4)
+      .linkDirectionalParticleSpeed(0.01)
       .linkDirectionalParticleWidth((link: any) =>
         highlightLinksRef.current.has(link) ? 4 : 0,
       )
@@ -725,17 +734,82 @@ const DynamicFollowingsGraph: React.FC = () => {
         </Space>
       </Card>
 
-      {/* 图形容器 */}
+      {/* 图形和参数调节面板并列 */}
       <div
-        ref={containerRef}
         style={{
+          display: "flex",
           flex: 1,
+          gap: 8,
           minHeight: 0,
-          border: "1px solid #d9d9d9",
-          borderRadius: 8,
-          background: "#1a1a1a",
+          overflow: "hidden",
         }}
-      />
+      >
+        {/* 图形容器 */}
+        <div
+          ref={containerRef}
+          style={{
+            flex: 1,
+            minWidth: 0,
+            minHeight: 0,
+            border: "1px solid #d9d9d9",
+            borderRadius: 8,
+            background: "#1a1a1a",
+          }}
+        />
+
+        {/* 参数调节面板 */}
+        <Card
+          size="small"
+          title="参数调节"
+          style={{ width: 200, flexShrink: 0 }}
+        >
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 12, marginBottom: 4 }}>
+              冷却速度: {alphaDecay.toFixed(3)}
+            </div>
+            <Slider
+              min={0}
+              max={0.1}
+              step={0.001}
+              value={alphaDecay}
+              onChange={(value) => {
+                setAlphaDecay(value);
+                graphRef.current?.d3AlphaDecay(value);
+              }}
+            />
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ fontSize: 12, marginBottom: 4 }}>
+              节点摩擦力: {velocityDecay.toFixed(2)}
+            </div>
+            <Slider
+              min={0}
+              max={1}
+              step={0.01}
+              value={velocityDecay}
+              onChange={(value) => {
+                setVelocityDecay(value);
+                graphRef.current?.d3VelocityDecay(value);
+              }}
+            />
+          </div>
+          <div>
+            <div style={{ fontSize: 12, marginBottom: 4 }}>
+              粒子速度: {particleSpeed.toFixed(3)}
+            </div>
+            <Slider
+              min={0.001}
+              max={0.1}
+              step={0.001}
+              value={particleSpeed}
+              onChange={(value) => {
+                setParticleSpeed(value);
+                graphRef.current?.linkDirectionalParticleSpeed(value);
+              }}
+            />
+          </div>
+        </Card>
+      </div>
     </div>
   );
 };
