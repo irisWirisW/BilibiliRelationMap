@@ -1,7 +1,7 @@
 {
     "name": "Bilibili React Helper",
     "namespace": "bilibili-react-helper",
-    "version": "0.4.18",
+    "version": "0.4.20",
     "description": "基于 React + TypeScript + Ant Design 的哔哩哔哩增强脚本",
     "author": "1ris_W",
     "license": "AGPL3",

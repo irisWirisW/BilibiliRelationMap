@@ -9,6 +9,7 @@ import {
   Progress,
   Select,
   Slider,
+  ColorPicker,
 } from "antd";
 import {
   PlayCircleOutlined,
@@ -125,6 +126,13 @@ const DynamicFollowingsGraph: React.FC = () => {
   const [alphaDecay, setAlphaDecay] = useState(0.05);
   const [velocityDecay, setVelocityDecay] = useState(0.6);
   const [particleSpeed, setParticleSpeed] = useState(0.01);
+  const [nodeColor, setNodeColor] = useState("#4ecdc4");
+  const [nodeRelSize, setNodeRelSize] = useState(4);
+  const [linkColor, setLinkColor] = useState("#ffffff40");
+  const [linkCurvature, setLinkCurvature] = useState(0);
+  const [linkArrowLength, setLinkArrowLength] = useState(0);
+  const [chargeStrength, setChargeStrength] = useState(-100);
+  const [cooldownTime, setCooldownTime] = useState(15000);
 
   // 统计信息
   const [stats, setStats] = useState({ nodeCount: 0, linkCount: 0 });
@@ -234,9 +242,52 @@ const DynamicFollowingsGraph: React.FC = () => {
       graphRef.current.dagLevelDistance(200);
     }
 
-    graphRef.current.d3Force("charge")?.strength(-100);
+    graphRef.current.d3Force("charge")?.strength(chargeStrength);
     graphRef.current.d3ReheatSimulation();
   }, [dagOrientation]);
+
+  // 更新节点颜色
+  useEffect(() => {
+    if (!graphRef.current) return;
+    graphRef.current.nodeColor(() => nodeColor);
+  }, [nodeColor]);
+
+  // 更新节点大小
+  useEffect(() => {
+    if (!graphRef.current) return;
+    graphRef.current.nodeRelSize(nodeRelSize);
+  }, [nodeRelSize]);
+
+  // 更新连线颜色
+  useEffect(() => {
+    if (!graphRef.current) return;
+    graphRef.current.linkColor(() => linkColor);
+  }, [linkColor]);
+
+  // 更新连线曲率
+  useEffect(() => {
+    if (!graphRef.current) return;
+    graphRef.current.linkCurvature(linkCurvature);
+  }, [linkCurvature]);
+
+  // 更新箭头长度
+  useEffect(() => {
+    if (!graphRef.current) return;
+    graphRef.current.linkDirectionalArrowLength(linkArrowLength);
+  }, [linkArrowLength]);
+
+  // 更新斥力强度
+  useEffect(() => {
+    if (!graphRef.current) return;
+    graphRef.current.d3Force("charge")?.strength(chargeStrength);
+    graphRef.current.d3ReheatSimulation();
+  }, [chargeStrength]);
+
+  // 更新冷却时间
+  useEffect(() => {
+    if (!graphRef.current) return;
+    graphRef.current.cooldownTime(cooldownTime);
+  }, [cooldownTime]);
 
   /** 向图形添加节点（增量方式） */
   const addNodesToGraph = useCallback((newNodes: GraphNode[]) => {
@@ -761,9 +812,13 @@ const DynamicFollowingsGraph: React.FC = () => {
         <Card
           size="small"
           title="参数调节"
-          style={{ width: 200, flexShrink: 0 }}
+          style={{ width: 220, flexShrink: 0, overflowY: "auto" }}
         >
-          <div style={{ marginBottom: 16 }}>
+          {/* 力引擎参数 */}
+          <div style={{ fontSize: 12, fontWeight: "bold", marginBottom: 8 }}>
+            力引擎
+          </div>
+          <div style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 12, marginBottom: 4 }}>
               冷却速度: {alphaDecay.toFixed(3)}
             </div>
@@ -778,9 +833,9 @@ const DynamicFollowingsGraph: React.FC = () => {
               }}
             />
           </div>
-          <div style={{ marginBottom: 16 }}>
+          <div style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 12, marginBottom: 4 }}>
-              节点摩擦力: {velocityDecay.toFixed(2)}
+              速度衰减: {velocityDecay.toFixed(2)}
             </div>
             <Slider
               min={0}
@@ -793,7 +848,121 @@ const DynamicFollowingsGraph: React.FC = () => {
               }}
             />
           </div>
-          <div>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 12, marginBottom: 4 }}>
+              斥力强度: {chargeStrength}
+            </div>
+            <Slider
+              min={-500}
+              max={0}
+              step={10}
+              value={chargeStrength}
+              onChange={setChargeStrength}
+            />
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 12, marginBottom: 4 }}>
+              冷却时间: {(cooldownTime / 1000).toFixed(0)}s
+            </div>
+            <Slider
+              min={1000}
+              max={60000}
+              step={1000}
+              value={cooldownTime}
+              onChange={setCooldownTime}
+            />
+          </div>
+
+          {/* 节点参数 */}
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: "bold",
+              marginBottom: 8,
+              marginTop: 16,
+            }}
+          >
+            节点
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 12, marginBottom: 4 }}>
+              节点大小: {nodeRelSize}
+            </div>
+            <Slider
+              min={1}
+              max={20}
+              step={1}
+              value={nodeRelSize}
+              onChange={setNodeRelSize}
+            />
+          </div>
+          <div
+            style={{
+              marginBottom: 12,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <span style={{ fontSize: 12 }}>节点颜色</span>
+            <ColorPicker
+              size="small"
+              value={nodeColor}
+              onChange={(color) => setNodeColor(color.toHexString())}
+            />
+          </div>
+
+          {/* 连线参数 */}
+          <div
+            style={{
+              fontSize: 12,
+              fontWeight: "bold",
+              marginBottom: 8,
+              marginTop: 16,
+            }}
+          >
+            连线
+          </div>
+          <div
+            style={{
+              marginBottom: 12,
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            <span style={{ fontSize: 12 }}>连线颜色</span>
+            <ColorPicker
+              size="small"
+              value={linkColor}
+              onChange={(color) => setLinkColor(color.toHexString())}
+            />
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 12, marginBottom: 4 }}>
+              曲线弧度: {linkCurvature.toFixed(2)}
+            </div>
+            <Slider
+              min={0}
+              max={1}
+              step={0.05}
+              value={linkCurvature}
+              onChange={setLinkCurvature}
+            />
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 12, marginBottom: 4 }}>
+              箭头长度: {linkArrowLength}
+            </div>
+            <Slider
+              min={0}
+              max={15}
+              step={1}
+              value={linkArrowLength}
+              onChange={setLinkArrowLength}
+            />
+          </div>
+          <div style={{ marginBottom: 12 }}>
             <div style={{ fontSize: 12, marginBottom: 4 }}>
               粒子速度: {particleSpeed.toFixed(3)}
             </div>
