@@ -57,12 +57,13 @@ const FansList: React.FC = () => {
   ];
 
   return (
-    <div>
-      <Spin spinning={loading}>
+    <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      <Spin spinning={loading} style={{ flex: 1, overflow: "hidden" }}>
         <Table
           columns={columns}
           dataSource={fansList}
           rowKey="mid"
+          scroll={{ y: "calc(100vh - 200px)" }}
           pagination={{
             current: currentPage,
             pageSize: pageSize,
