@@ -23,6 +23,7 @@ import {
 import FansList from "./FansList";
 import FollowingsList from "./FollowingsList";
 import DynamicFollowingsGraph from "./DynamicFollowingsGraph/index";
+import ReactForceGraph from "./ReactForceGraph/index";
 import metadata from "../metadata.json";
 
 const { Title, Text, Paragraph } = Typography;
@@ -227,6 +228,16 @@ const InfoModal: React.FC<InfoModalProps> = ({ visible, onClose }) => {
         </Space>
       ),
       children: <DynamicFollowingsGraph />,
+    },
+    {
+      key: "reactforcegraph",
+      label: (
+        <Space>
+          <ApartmentOutlined />
+          React Force Graph
+        </Space>
+      ),
+      children: <ReactForceGraph />,
     },
   ];
 

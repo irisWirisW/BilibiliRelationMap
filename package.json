@@ -1,6 +1,6 @@
 {
   "name": "react-userscript",
-  "version": "0.4.29",
+  "version": "0.5.0",
   "description": "React + TypeScript + Ant Design 油猴脚本",
   "type": "module",
   "main": "dist/script.user.js",
@@ -47,6 +47,7 @@
     "force-graph": "^1.43.5",
     "idb": "^8.0.3",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+    "react-force-graph-2d": "^1.29.0"
   }
 }
