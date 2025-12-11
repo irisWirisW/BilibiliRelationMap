@@ -11,7 +11,9 @@ import {
   Slider,
   ColorPicker,
   Input,
+  Collapse,
 } from "antd";
+import type { CollapseProps } from "antd";
 import {
   PlayCircleOutlined,
   PauseCircleOutlined,
@@ -788,6 +790,105 @@ const DynamicFollowingsGraph: React.FC = () => {
       ? Math.round((loadingState.current / loadingState.total) * 100)
       : 0;
 
+  // 折叠面板内容
+  const collapseItems: CollapseProps["items"] = [
+    {
+      key: "info",
+      label: (
+        <Space size="middle">
+          <span>
+            节点: {stats.nodeCount} | 连线: {stats.linkCount} |{" "}
+            {getStatusText()}
+          </span>
+          <Button
+            type="primary"
+            size="small"
+            icon={
+              isPaused || !isLoading ? (
+                <PlayCircleOutlined />
+              ) : (
+                <PauseCircleOutlined />
+              )
+            }
+            onClick={(e) => {
+              e.stopPropagation();
+              handleStartPause();
+            }}
+          >
+            {getButtonText()}
+          </Button>
+          <Select
+            value={dagOrientation}
+            onChange={setDagOrientation}
+            onClick={(e) => e.stopPropagation()}
+            size="small"
+            style={{ width: 100 }}
+            options={[
+              { label: "自由布局", value: null },
+              { label: "上下 (TD)", value: "td" },
+              { label: "下上 (BU)", value: "bu" },
+              { label: "左右 (LR)", value: "lr" },
+              { label: "右左 (RL)", value: "rl" },
+              { label: "径向向外", value: "radialout" },
+              { label: "径向向内", value: "radialin" },
+            ]}
+          />
+          <Button
+            size="small"
+            icon={<ReloadOutlined />}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleResetView();
+            }}
+          >
+            重置视图
+          </Button>
+          <Button
+            size="small"
+            icon={<DisconnectOutlined />}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleRemoveIsolatedNodes();
+            }}
+            disabled={isLoading || stats.nodeCount === 0}
+          >
+            移除孤立节点
+          </Button>
+        </Space>
+      ),
+      children: (
+        <>
+          <Row gutter={16}>
+            <Col span={6}>
+              <Statistic title="节点数" value={stats.nodeCount} />
+            </Col>
+            <Col span={6}>
+              <Statistic title="连线数" value={stats.linkCount} />
+            </Col>
+            <Col span={12}>
+              <Statistic
+                title="状态"
+                value={getStatusText()}
+                valueStyle={{ fontSize: 14 }}
+              />
+            </Col>
+          </Row>
+
+          {isLoading && (
+            <div style={{ marginTop: 12 }}>
+              <Progress percent={progress} size="small" />
+              {loadingState.currentUser && (
+                <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
+                  正在处理: {loadingState.currentUser}
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      ),
+    },
+  ];
+
   return (
     <div
       style={{
@@ -800,84 +901,26 @@ const DynamicFollowingsGraph: React.FC = () => {
     >
       {/* 控制面板 */}
       <Card size="small" style={{ marginBottom: 8, flexShrink: 0 }}>
-        <Row gutter={16}>
-          <Col span={6}>
-            <Statistic title="节点数" value={stats.nodeCount} />
-          </Col>
-          <Col span={6}>
-            <Statistic title="连线数" value={stats.linkCount} />
-          </Col>
-          <Col span={12}>
-            <Statistic
-              title="状态"
-              value={getStatusText()}
-              valueStyle={{ fontSize: 14 }}
-            />
-          </Col>
-        </Row>
-
-        {isLoading && (
-          <div style={{ marginTop: 12 }}>
-            <Progress percent={progress} size="small" />
-            {loadingState.currentUser && (
-              <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>
-                正在处理: {loadingState.currentUser}
-              </div>
-            )}
-          </div>
-        )}
-
-        <Space style={{ marginTop: 16 }}>
-          <Button
-            type="primary"
-            icon={
-              isPaused || !isLoading ? (
-                <PlayCircleOutlined />
-              ) : (
-                <PauseCircleOutlined />
-              )
-            }
-            onClick={handleStartPause}
-          >
-            {getButtonText()}
-          </Button>
-
-          <Select
-            value={dagOrientation}
-            onChange={setDagOrientation}
-            style={{ width: 120 }}
-            options={[
-              { label: "自由布局", value: null },
-              { label: "上下 (TD)", value: "td" },
-              { label: "下上 (BU)", value: "bu" },
-              { label: "左右 (LR)", value: "lr" },
-              { label: "右左 (RL)", value: "rl" },
-              { label: "径向向外", value: "radialout" },
-              { label: "径向向内", value: "radialin" },
-            ]}
-          />
-          <Button icon={<ReloadOutlined />} onClick={handleResetView}>
-            重置视图
-          </Button>
-          <Button
-            icon={<DisconnectOutlined />}
-            onClick={handleRemoveIsolatedNodes}
-            disabled={isLoading || stats.nodeCount === 0}
-          >
-            移除孤立节点
-          </Button>
-
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+          }}
+        >
+          <Collapse items={collapseItems} size="small" style={{ flex: 1 }} />
           <Input.Search
+            size="large"
             placeholder="搜索 UID 或用户名"
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
             onSearch={handleSearch}
             allowClear
             onClear={handleClearSearch}
-            style={{ width: 180 }}
+            style={{ width: 200, flexShrink: 0 }}
             enterButton={<SearchOutlined />}
           />
-        </Space>
+        </div>
       </Card>
 
       {/* 图形和参数调节面板并列 */}
