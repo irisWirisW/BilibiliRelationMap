@@ -10,12 +10,14 @@ import {
   Select,
   Slider,
   ColorPicker,
+  Input,
 } from "antd";
 import {
   PlayCircleOutlined,
   PauseCircleOutlined,
   ReloadOutlined,
   DisconnectOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
 import ForceGraph from "force-graph";
 import { useAppContext } from "../../contexts/AppContext";
@@ -137,6 +139,10 @@ const DynamicFollowingsGraph: React.FC = () => {
   // 统计信息
   const [stats, setStats] = useState({ nodeCount: 0, linkCount: 0 });
 
+  // 搜索状态
+  const [searchValue, setSearchValue] = useState("");
+  const searchedNodesRef = useRef<Set<GraphNode>>(new Set());
+
   // 高亮状态（使用 ref 避免重新渲染）
   const highlightNodesRef = useRef<Set<GraphNode>>(new Set());
   const highlightLinksRef = useRef<Set<GraphLink>>(new Set());
@@ -201,13 +207,23 @@ const DynamicFollowingsGraph: React.FC = () => {
         highlightLinksRef.current.has(link) ? 4 : 0,
       )
       .nodeCanvasObjectMode((node: any) =>
-        highlightNodesRef.current.has(node) ? "before" : undefined,
+        highlightNodesRef.current.has(node) ||
+        searchedNodesRef.current.has(node)
+          ? "before"
+          : undefined,
       )
       .nodeCanvasObject((node: any, ctx: CanvasRenderingContext2D) => {
         if (!node.x || !node.y) return;
         ctx.beginPath();
         ctx.arc(node.x, node.y, NODE_R * 0.56, 0, 2 * Math.PI, false);
-        ctx.fillStyle = node === hoverNodeRef.current ? "#b535ffb0" : "#ffd93d";
+        // 搜索高亮使用绿色，hover 高亮使用紫色，普通高亮使用黄色
+        if (searchedNodesRef.current.has(node)) {
+          ctx.fillStyle = "#00ff00";
+        } else if (node === hoverNodeRef.current) {
+          ctx.fillStyle = "#b535ffb0";
+        } else {
+          ctx.fillStyle = "#ffd93d";
+        }
         ctx.fill();
       })
       .nodeColor(() => "#4ecdc4");
@@ -670,6 +686,73 @@ const DynamicFollowingsGraph: React.FC = () => {
     message.success(`已移除 ${removedCount} 个孤立节点`);
   };
 
+  /** 搜索节点 */
+  const handleSearch = useCallback(
+    (value: string) => {
+      if (!graphRef.current) return;
+
+      const trimmedValue = value.trim();
+      if (!trimmedValue) {
+        searchedNodesRef.current.clear();
+        graphRef.current.nodeColor(graphRef.current.nodeColor());
+        return;
+      }
+
+      const { nodes } = graphRef.current.graphData();
+      const allNodes = nodes as GraphNode[];
+
+      // 尝试精确匹配 UID
+      const searchId = parseInt(trimmedValue, 10);
+      let matchedNodes: GraphNode[] = [];
+
+      if (!isNaN(searchId)) {
+        // 精确匹配 UID
+        const exactMatch = allNodes.find((node) => node.id === searchId);
+        if (exactMatch) {
+          matchedNodes = [exactMatch];
+        }
+      }
+
+      // 如果没有精确匹配，进行模糊匹配用户名
+      if (matchedNodes.length === 0) {
+        const lowerValue = trimmedValue.toLowerCase();
+        matchedNodes = allNodes.filter((node) =>
+          node.name.toLowerCase().includes(lowerValue),
+        );
+      }
+
+      if (matchedNodes.length > 0) {
+        searchedNodesRef.current = new Set(matchedNodes);
+        // 更新节点颜色
+        graphRef.current.nodeColor(graphRef.current.nodeColor());
+
+        // 如果只有一个匹配结果，聚焦到该节点
+        if (matchedNodes.length === 1) {
+          const foundNode = matchedNodes[0];
+          if (foundNode.x !== undefined && foundNode.y !== undefined) {
+            graphRef.current.centerAt(foundNode.x, foundNode.y, 500);
+            graphRef.current.zoom(2, 500);
+          }
+        }
+        message.success(`找到 ${matchedNodes.length} 个匹配节点`);
+      } else {
+        searchedNodesRef.current.clear();
+        graphRef.current.nodeColor(graphRef.current.nodeColor());
+        message.warning(`未找到匹配: ${trimmedValue}`);
+      }
+    },
+    [message],
+  );
+
+  /** 清除搜索高亮 */
+  const handleClearSearch = useCallback(() => {
+    setSearchValue("");
+    searchedNodesRef.current.clear();
+    if (graphRef.current) {
+      graphRef.current.nodeColor(graphRef.current.nodeColor());
+    }
+  }, []);
+
   /** 获取按钮文字 */
   const getButtonText = () => {
     if (loadingState.status === "idle") return "开始加载";
@@ -783,6 +866,17 @@ const DynamicFollowingsGraph: React.FC = () => {
           >
             移除孤立节点
           </Button>
+
+          <Input.Search
+            placeholder="搜索 UID 或用户名"
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
+            onSearch={handleSearch}
+            allowClear
+            onClear={handleClearSearch}
+            style={{ width: 180 }}
+            enterButton={<SearchOutlined />}
+          />
         </Space>
       </Card>
 
@@ -976,6 +1070,13 @@ const DynamicFollowingsGraph: React.FC = () => {
                 setParticleSpeed(value);
                 graphRef.current?.linkDirectionalParticleSpeed(value);
               }}
+            />
+          </div>
+          <div>
+            <div style={{ fontSize: 12, marginBottom: 4 }}>节点颜色</div>
+            <ColorPicker
+              value={nodeColor}
+              onChange={(color) => setNodeColor(color.toHexString())}
             />
           </div>
         </Card>
