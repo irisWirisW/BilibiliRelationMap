@@ -1,33 +1,22 @@
 {
     "name": "Bilibili React Helper",
     "namespace": "bilibili-react-helper",
-    "version": "0.5.3",
+    "version": "0.5.5",
     "description": "基于 React + TypeScript + Ant Design 的哔哩哔哩增强脚本",
     "author": "1ris_W",
     "license": "AGPL3",
     "match": "*://space.bilibili.com/*",
     "grant": [
         "GM_xmlhttpRequest",
-        "GM_cookie",
-        "unsafeWindow",
         "GM_getValue",
         "GM_setValue",
         "GM_deleteValue",
         "GM_info",
-        "GM_xmlhttpRequest",
         "GM_registerMenuCommand",
         "GM_unregisterMenuCommand"
     ],
     "connect": [
-        "raw.githubusercontent.com",
-        "github.com",
-        "[altCdn.host]",
-        "cn.bing.com",
-        "www.bing.com",
-        "translate.google.cn",
-        "translate.google.com",
-        "localhost",
-        "*"
+        "api.bilibili.com"
     ],
     "run-at": "document-start",
     "exclude": [
