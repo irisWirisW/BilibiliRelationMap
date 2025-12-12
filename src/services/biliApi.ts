@@ -34,6 +34,14 @@ const request = <T extends BiliApiResponse>(
       url: fullUrl.toString(),
       timeout: 30000,
       onload: (response) => {
+        // 修复1: 检查 HTTP 状态码
+        if (response.status < 200 || response.status >= 300) {
+          reject(
+            new Error(`HTTP 错误: ${response.status} ${response.statusText}`),
+          );
+          return;
+        }
+
         try {
           const data: T = JSON.parse(response.responseText);
           if (data.code === 0) {
@@ -41,12 +49,16 @@ const request = <T extends BiliApiResponse>(
           } else {
             reject(new Error(data.message || "请求失败"));
           }
-        } catch {
-          reject(new Error("解析响应失败"));
+        } catch (e) {
+          reject(
+            new Error(
+              `解析响应失败: ${e instanceof Error ? e.message : String(e)}`,
+            ),
+          );
         }
       },
-      onerror: () => {
-        reject(new Error("网络请求失败"));
+      onerror: (response) => {
+        reject(new Error(`网络请求失败: ${response.error || "未知错误"}`));
       },
       ontimeout: () => {
         reject(new Error("请求超时"));
@@ -80,6 +92,9 @@ export interface CommonFollowingsResult {
   fromCache: boolean;
 }
 
+// 修复3: 请求去重 - 缓存正在进行的请求
+const pendingRequests = new Map<string, Promise<CommonFollowingsResult>>();
+
 // ================== API 函数 ==================
 
 /**
@@ -89,6 +104,11 @@ export const getCurrentUserMidFromAPI = async (): Promise<number> => {
   const data = await request<NavResponse>(
     "https://api.bilibili.com/x/web-interface/nav",
   );
+
+  // 修复2: 检查 data.data 是否存在
+  if (!data.data) {
+    throw new Error("无效的响应数据");
+  }
 
   if (!data.data.isLogin) {
     throw new Error("用户未登录");
@@ -151,7 +171,7 @@ export const getFollowingsList = (
 };
 
 /**
- * 获取共同关注列表（带缓存）
+ * 获取共同关注列表（带缓存和请求去重）
  */
 export const getCommonFollowings = async (
   vmid: number,
@@ -168,15 +188,34 @@ export const getCommonFollowings = async (
     }
   }
 
-  // 缓存未命中，发起请求
-  const response = await request<CommonFollowingsResponse>(
-    "https://api.bilibili.com/x/relation/followings/followed_upper",
-    { vmid },
-  );
+  // 修复3: 检查是否有正在进行的相同请求，避免重复请求
+  const pendingKey = `pending_${vmid}`;
+  if (pendingRequests.has(pendingKey)) {
+    logger.log(`复用进行中的请求 (mid: ${vmid})`);
+    return pendingRequests.get(pendingKey)!;
+  }
 
-  // 存入缓存
-  cacheManager.set(cacheKey, response);
-  logger.log(`API 请求共同关注 (mid: ${vmid}), 已缓存`);
+  // 创建请求 Promise
+  const requestPromise = (async (): Promise<CommonFollowingsResult> => {
+    try {
+      const response = await request<CommonFollowingsResponse>(
+        "https://api.bilibili.com/x/relation/followings/followed_upper",
+        { vmid },
+      );
 
-  return { response, fromCache: false };
+      // 存入缓存
+      cacheManager.set(cacheKey, response);
+      logger.log(`API 请求共同关注 (mid: ${vmid}), 已缓存`);
+
+      return { response, fromCache: false };
+    } finally {
+      // 请求完成后从 pending 中移除
+      pendingRequests.delete(pendingKey);
+    }
+  })();
+
+  // 将请求添加到 pending 中
+  pendingRequests.set(pendingKey, requestPromise);
+
+  return requestPromise;
 };

@@ -9,7 +9,7 @@
   <img src="https://img.shields.io/badge/TypeScript-5.9.3-3178c6?logo=typescript" alt="TypeScript">
   <img src="https://img.shields.io/badge/Ant%20Design-5.29.1-0170fe?logo=antdesign" alt="Ant Design">
   <img src="https://img.shields.io/badge/License-AGPLv3-green" alt="License">
-  <img src="https://img.shields.io/badge/Version-0.5.0-blue" alt="Version">
+  <img src="https://img.shields.io/badge/Version-0.5.2-blue" alt="Version">
 </p>
 
 ## 项目简介
